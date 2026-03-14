@@ -2,7 +2,7 @@ import type {
   ActionBinding,
   VisibilityCondition,
 } from "@json-render/core";
-import { JRX_NODE, FRAGMENT, type JrxNode } from "./types";
+import { JRX_NODE, FRAGMENT, type JrxElement, type JrxNode } from "./types";
 import type { JrxComponent } from "./types";
 
 export { FRAGMENT as Fragment };
@@ -18,26 +18,26 @@ const RESERVED_PROPS = new Set([
 ]);
 
 /**
- * Normalize a raw `children` value from JSX props into a flat array of JrxNodes.
+ * Normalize a raw `children` value from JSX props into a flat array of JrxElements.
  * Handles: undefined, single node, nested arrays, and filters out nulls/booleans.
  */
-function normalizeChildren(raw: unknown): JrxNode[] {
+function normalizeChildren(raw: unknown): JrxElement[] {
   if (raw == null || typeof raw === "boolean") return [];
 
   if (Array.isArray(raw)) {
-    const result: JrxNode[] = [];
+    const result: JrxElement[] = [];
     for (const child of raw) {
       if (child == null || typeof child === "boolean") continue;
       if (Array.isArray(child)) {
         result.push(...normalizeChildren(child));
       } else {
-        result.push(child as JrxNode);
+        result.push(child as JrxElement);
       }
     }
     return result;
   }
 
-  return [raw as JrxNode];
+  return [raw as JrxElement];
 }
 
 /**
@@ -62,9 +62,9 @@ type JsxType = string | typeof FRAGMENT | JrxComponent;
  * Core factory — shared by `jsx` and `jsxs`.
  *
  * If `type` is a function, it is called with props (like React calls
- * function components). The function returns a JrxNode directly.
+ * function components). The function may return null/undefined.
  *
- * If `type` is a string or Fragment, a JrxNode is constructed inline.
+ * If `type` is a string or Fragment, a JrxElement is constructed inline.
  */
 function createNode(
   type: JsxType,
@@ -73,6 +73,7 @@ function createNode(
   const p = rawProps ?? {};
 
   // Function component — call it, just like React does.
+  // May return null/undefined to render nothing.
   if (typeof type === "function") {
     return type(p);
   }
@@ -104,7 +105,9 @@ export function jsx(
   key?: string,
 ): JrxNode {
   const node = createNode(type, props);
-  if (key != null) node.key = String(key);
+  // Key is intentionally dropped when a component returns null/undefined —
+  // there is no element to attach it to.
+  if (node != null && key != null) node.key = String(key);
   return node;
 }
 
@@ -118,7 +121,7 @@ export function jsxs(
   key?: string,
 ): JrxNode {
   const node = createNode(type, props);
-  if (key != null) node.key = String(key);
+  if (node != null && key != null) node.key = String(key);
   return node;
 }
 
@@ -132,7 +135,7 @@ export namespace JSX {
     [tag: string]: Record<string, unknown>;
   }
 
-  /** The type returned by JSX expressions. */
+  /** The type returned by JSX expressions (may be null/undefined). */
   export type Element = JrxNode;
 
   export interface ElementChildrenAttribute {
