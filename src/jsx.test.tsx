@@ -1,6 +1,6 @@
 import { describe, it, expect } from "bun:test";
 import { render } from "./render";
-import { isJrxNode, FRAGMENT } from "./types";
+import { isJrxElement, FRAGMENT } from "./types";
 import { jsx, jsxs, Fragment } from "./jsx-runtime";
 import {
   Stack,
@@ -18,26 +18,26 @@ import {
 // =============================================================================
 
 describe("jsx factory", () => {
-  it("jsx() with string type returns a JrxNode", () => {
+  it("jsx() with string type returns a JrxElement", () => {
     const node = jsx("Card", { title: "Hello" });
-    expect(isJrxNode(node)).toBe(true);
-    expect(node.type).toBe("Card");
-    expect(node.props).toEqual({ title: "Hello" });
+    expect(isJrxElement(node)).toBe(true);
+    expect(node!.type).toBe("Card");
+    expect(node!.props).toEqual({ title: "Hello" });
   });
 
   it("jsx() with component function resolves typeName", () => {
     const node = jsx(Card, { title: "Hello" });
-    expect(isJrxNode(node)).toBe(true);
-    expect(node.type).toBe("Card");
-    expect(node.props).toEqual({ title: "Hello" });
+    expect(isJrxElement(node)).toBe(true);
+    expect(node!.type).toBe("Card");
+    expect(node!.props).toEqual({ title: "Hello" });
   });
 
-  it("jsxs() returns a JrxNode with children", () => {
+  it("jsxs() returns a JrxElement with children", () => {
     const node = jsxs(Stack, {
       children: [jsx(Text, { content: "A" }), jsx(Text, { content: "B" })],
     });
-    expect(isJrxNode(node)).toBe(true);
-    expect(node.children).toHaveLength(2);
+    expect(isJrxElement(node)).toBe(true);
+    expect(node!.children).toHaveLength(2);
   });
 
   it("Fragment is the FRAGMENT symbol", () => {
@@ -46,8 +46,8 @@ describe("jsx factory", () => {
 
   it("jsx() extracts key from third argument", () => {
     const node = jsx(Card, { title: "Hi" }, "my-key");
-    expect(node.key).toBe("my-key");
-    expect(node.props).toEqual({ title: "Hi" });
+    expect(node!.key).toBe("my-key");
+    expect(node!.props).toEqual({ title: "Hi" });
   });
 
   it("jsx() extracts reserved props", () => {
@@ -64,26 +64,70 @@ describe("jsx factory", () => {
       watch,
     });
 
-    expect(node.props).toEqual({ label: "Go" });
-    expect(node.visible).toEqual(vis);
-    expect(node.on).toEqual(on);
-    expect(node.repeat).toEqual(repeat);
-    expect(node.watch).toEqual(watch);
+    expect(node!.props).toEqual({ label: "Go" });
+    expect(node!.visible).toEqual(vis);
+    expect(node!.on).toEqual(on);
+    expect(node!.repeat).toEqual(repeat);
+    expect(node!.watch).toEqual(watch);
   });
 
   it("jsx() handles null props", () => {
     const node = jsx("Divider", null);
-    expect(isJrxNode(node)).toBe(true);
-    expect(node.props).toEqual({});
-    expect(node.children).toEqual([]);
+    expect(isJrxElement(node)).toBe(true);
+    expect(node!.props).toEqual({});
+    expect(node!.children).toEqual([]);
   });
 
   it("jsx() filters null/boolean children", () => {
     const node = jsxs(Stack, {
       children: [null, jsx(Text, { content: "A" }), false, undefined, true],
     });
-    expect(node.children).toHaveLength(1);
-    expect(node.children[0].type).toBe("Text");
+    expect(node!.children).toHaveLength(1);
+    expect(node!.children[0].type).toBe("Text");
+  });
+});
+
+// =============================================================================
+// Null / undefined component returns
+// =============================================================================
+
+describe("null/undefined component returns", () => {
+  it("jsx() with a component returning null produces null", () => {
+    const NullComponent = (_props: Record<string, unknown>) => null;
+    const node = jsx(NullComponent, {});
+    expect(node).toBeNull();
+    expect(isJrxElement(node)).toBe(false);
+  });
+
+  it("jsx() with a component returning undefined produces undefined", () => {
+    const UndefinedComponent = (_props: Record<string, unknown>) => undefined;
+    const node = jsx(UndefinedComponent, {});
+    expect(node).toBeUndefined();
+    expect(isJrxElement(node)).toBe(false);
+  });
+
+  it("key argument is ignored when component returns null", () => {
+    const NullComponent = (_props: Record<string, unknown>) => null;
+    const node = jsx(NullComponent, {}, "my-key");
+    expect(node).toBeNull();
+  });
+
+  it("null-returning component children are filtered out", () => {
+    const NullComponent = (_props: Record<string, unknown>) => null;
+    const node = jsxs(Stack, {
+      children: [jsx(NullComponent, {}), jsx(Text, { content: "A" })],
+    });
+    expect(node!.children).toHaveLength(1);
+    expect(node!.children[0].type).toBe("Text");
+  });
+
+  it("undefined-returning component children are filtered out", () => {
+    const UndefinedComponent = (_props: Record<string, unknown>) => undefined;
+    const node = jsxs(Stack, {
+      children: [jsx(Text, { content: "A" }), jsx(UndefinedComponent, {})],
+    });
+    expect(node!.children).toHaveLength(1);
+    expect(node!.children[0].type).toBe("Text");
   });
 });
 

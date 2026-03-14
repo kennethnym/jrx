@@ -300,7 +300,15 @@ describe("state passthrough", () => {
 // =============================================================================
 
 describe("error handling", () => {
-  it("throws for non-JrxNode input", () => {
-    expect(() => render({} as JrxNode)).toThrow(/expects a JrxNode/);
+  it("throws for non-JrxElement input", () => {
+    expect(() => render({} as JrxNode)).toThrow(/expects a JrxElement/);
+  });
+
+  it("throws when given null", () => {
+    expect(() => render(null)).toThrow(/expects a JrxElement/);
+  });
+
+  it("throws when given undefined", () => {
+    expect(() => render(undefined)).toThrow(/expects a JrxElement/);
   });
 });

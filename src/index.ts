@@ -1,3 +1,3 @@
 export { render } from "./render";
-export { isJrxNode, JRX_NODE, FRAGMENT } from "./types";
-export type { JrxNode, JrxComponent, RenderOptions } from "./types";
+export { isJrxElement, isJrxNode, JRX_NODE, FRAGMENT } from "./types";
+export type { JrxElement, JrxNode, JrxComponent, RenderOptions } from "./types";
